@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Support Ticket Router</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .box {
+            background: white;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 1000px;
+            border-radius: 10px;
+        }
+
+        input, textarea, select, button {
+            padding: 10px;
+            margin: 5px;
+            font-size: 15px;
+        }
+
+        input, textarea {
+            width: 90%;
+        }
+
+        textarea {
+            height: 80px;
+        }
+
+        button {
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: #eee;
+            padding: 15px;
+            min-width: 150px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #333;
+            color: white;
+        }
+
+        #details {
+            background: #f8f8f8;
+            padding: 15px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Customer Support Ticket Router</h1>
+
+<!-- CREATE TICKET -->
+<div class="box">
+
+    <h2>Create Support Ticket</h2>
+
+    <input type="text" id="customer" placeholder="Enter Customer Name">
+
+    <br>
+
+    <textarea id="complaint"
+        placeholder="Enter customer complaint"></textarea>
+
+    <br>
+
+    <button onclick="createTicket()">Create Ticket</button>
+
+</div>
+
+
+<!-- DASHBOARD -->
+<div class="box">
+
+    <h2>Dashboard</h2>
+
+    <div class="dashboard">
+
+        <div class="card">
+            <h3>Total</h3>
+            <p id="total">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Open</h3>
+            <p id="open">0</p>
+        </div>
+
+        <div class="card">
+            <h3>In Progress</h3>
+            <p id="progress">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Resolved</h3>
+            <p id="resolved">0</p>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- SEARCH -->
+<div class="box">
+
+    <h2>Search Tickets</h2>
+
+    <input type="text" id="search"
+        placeholder="Search customer or complaint">
+
+    <button onclick="searchTickets()">Search</button>
+
+    <button onclick="loadTickets()">Show All</button>
+
+</div>
+
+
+<!-- TICKETS -->
+<div class="box">
+
+    <h2>Support Tickets</h2>
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Complaint</th>
+                <th>Category</th>
+                <th>Department</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody id="ticketTable">
+        </tbody>
+
+    </table>
+
+</div>
+
+
+<!-- CUSTOMER DETAILS -->
+<div class="box">
+
+    <h2>Customer Details</h2>
+
+    <div id="details">
+        Select "Review" to view customer details.
+    </div>
+
+</div>
+
+
+<script>
+
+    // CREATE TICKET
+    function createTicket() {
+
+        let customer = document.getElementById("customer").value;
+        let complaint = document.getElementById("complaint").value;
+
+        if (customer == "" || complaint == "") {
+            alert("Please enter customer name and complaint");
+            return;
+        }
+
+        fetch("/api/tickets", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                customer: customer,
+                complaint: complaint
+            })
+
+        })
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            alert("Ticket created successfully!");
+
+            document.getElementById("customer").value = "";
+            document.getElementById("complaint").value = "";
+
+            loadTickets();
+            loadDashboard();
+
+        });
+
+    }
+
+
+    // LOAD ALL TICKETS
+    function loadTickets() {
+
+        fetch("/api/tickets")
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            displayTickets(data);
+
+        });
+
+    }
+
+
+    // DISPLAY TICKETS
+    function displayTickets(data) {
+
+        let table = document.getElementById("ticketTable");
+
+        table.innerHTML = "";
+
+        data.forEach(ticket => {
+
+            table.innerHTML += `
+
+                <tr>
+
+                    <td>${ticket.id}</td>
+
+                    <td>${ticket.customer}</td>
+
+                    <td>${ticket.complaint}</td>
+
+                    <td>${ticket.category}</td>
+
+                    <td>${ticket.department}</td>
+
+                    <td>${ticket.priority}</td>
+
+                    <td>${ticket.status}</td>
+
+                    <td>
+
+                        <button onclick="reviewCustomer(${ticket.id})">
+                            Review
+                        </button>
+
+                        <button onclick="changeStatus(${ticket.id})">
+                            Status
+                        </button>
+
+                    </td>
+
+                </tr>
+
+            `;
+
+        });
+
+    }
+
+
+    // REVIEW CUSTOMER DETAILS
+    function reviewCustomer(id) {
+
+        fetch("/api/tickets/" + id)
+
+        .then(response => response.json())
+
+        .then(ticket => {
+
+            document.getElementById("details").innerHTML = `
+
+                <h3>Ticket ID: ${ticket.id}</h3>
+
+                <p><b>Customer:</b> ${ticket.customer}</p>
+
+                <p><b>Complaint:</b> ${ticket.complaint}</p>
+
+                <p><b>Category:</b> ${ticket.category}</p>
+
+                <p><b>Department:</b> ${ticket.department}</p>
+
+                <p><b>Priority:</b> ${ticket.priority}</p>
+
+                <p><b>Status:</b> ${ticket.status}</p>
+
+                <p><b>Date:</b> ${ticket.date}</p>
+
+            `;
+
+        });
+
+    }
+
+
+    // CHANGE STATUS
+    function changeStatus(id) {
+
+        let status = prompt(
+            "Enter status: Open, In Progress, or Resolved"
+        );
+
+        if (
+            status != "Open" &&
+            status != "In Progress" &&
+            status != "Resolved"
+        ) {
+            alert("Invalid status");
+            return;
+        }
+
+        fetch("/api/tickets/" + id + "/status", {
+
+            method: "PUT",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                status: status
+            })
+
+        })
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            alert("Status updated!");
+
+            loadTickets();
+            loadDashboard();
+
+        });
+
+    }
+
+
+    // SEARCH TICKETS
+    function searchTickets() {
+
+        let keyword = document.getElementById("search").value;
+
+        fetch("/api/search?keyword=" + keyword)
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            displayTickets(data);
+
+        });
+
+    }
+
+
+    // DASHBOARD
+    function loadDashboard() {
+
+        fetch("/api/dashboard")
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            document.getElementById("total").innerText =
+                data.total;
+
+            document.getElementById("open").innerText =
+                data.open;
+
+            document.getElementById("progress").innerText =
+                data.in_progress;
+
+            document.getElementById("resolved").innerText =
+                data.resolved;
+
+        });
+
+    }
+
+
+    // LOAD DATA WHEN PAGE OPENS
+    window.onload = function() {
+
+        loadTickets();
+        loadDashboard();
+
+    };
+
+</script>
+
+</body>
+</html>
